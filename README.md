@@ -2,6 +2,8 @@
 
 Proxy all http and https requests through a tunnel.
 
+![Screencast of the proxy](https://i.imgur.com/1IztvqA.gif)
+
 ### Quick Start
 
 Using NPM you can install proxy-tunnel globally so it can be ran at anytime anywhere.
