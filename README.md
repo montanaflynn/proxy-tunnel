@@ -4,10 +4,13 @@ Proxy all http and https requests through a tunnel.
 
 ### Quick Start
 
+Using NPM you can install proxy-tunnel globally so it can be ran at anytime anywhere.
+
 ```sh
-sudo npm install proxy-tunnel -g
+npm install proxy-tunnel -g
 tunnel-proxy
 ```
+Once the server is running you can then send it requests to be proxied by adding the target url in the `host` request header. Here's an example using cURL.
 
 ```sh
 curl localhost:3000/get -H "host:http://httpbin.org"
