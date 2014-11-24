@@ -1,0 +1,27 @@
+#!/usr/bin/env node
+'use strict';
+var proxy = require('./proxy.js');
+var cli = require('meow')({
+  pkg: "./package.json",
+  help: [
+      'Usage',
+      '  $ tunnel-proxy [options]',
+      '\n  options:',
+      '\t -p\t     change proxy port number (default: 3000)',
+      '\t -h\t     change target url header name (default: host)',
+      '\t -q\t     don\'t log every request, but still log errors',
+      '\t --version   output the current version of tunnel-proxy',
+      '\n  examples:',
+      '\t tunnel-proxy -p 8080',
+      '\t tunnel-proxy -h "baseurl"',
+      '\t tunnel-proxy -q'
+  ].join('\n')
+});
+
+var opts = {
+  port: cli.flags.p,
+  quiet: cli.flags.q,
+  header: cli.flags.h
+};
+
+proxy(opts);
