@@ -2,6 +2,8 @@
 
 Proxy all http and https requests through a tunnel.
 
+**Note**: Requires Node.js version >= 0.11.13 as it uses native promises.
+
 ![Screencast of the proxy](https://i.imgur.com/1IztvqA.gif)
 
 ### Quick Start
@@ -58,9 +60,18 @@ proxy({
 })
 ```
 
+### Uses
+
+- Get around CORS
+- Log requests / responses
+- Block requests / responses
+- Transform requests / responses
+- Much more I can't think of
+
 ### Todos
 
 - Add testing framework
+- Add various options
 - Custom middleware???
 
 ### Contributing
