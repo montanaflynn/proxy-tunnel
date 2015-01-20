@@ -18,7 +18,6 @@
     "meow": "^2.0.0",
     "qs": "^2.3.3",
     "socket.io-client": "^1.2.1",
-    "stream-meter": "^1.0.3",
-    "ws": "^0.6.5"
+    "stream-meter": "^1.0.3"
   }
 }
