@@ -2,9 +2,6 @@
   "author": "Montana Flynn",
   "name": "proxy-tunnel",
   "version": "0.0.3",
-  "engines": {
-    "node": ">=0.11.13"
-  },
   "description": "Proxy all http and https requests through a tunnel",
   "main": "proxy.js",
   "keywords": [
@@ -12,11 +9,17 @@
     "tunnel",
     "http",
     "https",
-    "api"
+    "api",
+    "analytics"
   ],
   "license": "MIT",
   "dependencies": {
+    "es6-promise": "^2.0.1",
     "meow": "^2.0.0",
-    "stream-meter": "^1.0.3"
+    "qs": "^2.3.3",
+    "socket.io-client": "^1.2.1",
+    "stream-meter": "^1.0.3",
+    "ws": "^0.6.5",
+    "zmq": "^2.9.0"
   }
 }
