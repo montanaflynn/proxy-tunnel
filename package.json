@@ -4,6 +4,9 @@
   "version": "0.0.7",
   "description": "Proxy all http and https requests through a tunnel",
   "main": "proxy.js",
+  "bin": {
+    "proxy-tunnel": "./proxy"
+  },
   "keywords": [
     "proxy",
     "tunnel",
