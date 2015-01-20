@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env node 
 'use strict';
 var proxy = require('./proxy.js');
 var cli = require('meow')({
@@ -8,20 +8,23 @@ var cli = require('meow')({
       '  $ tunnel-proxy [options]',
       '\n  options:',
       '\t -p\t     change proxy port number (default: 3000)',
-      '\t -h\t     change target url header name (default: host)',
+      '\t -h\t     change target url header name (default: target)',
       '\t -q\t     don\'t log every request, but still log errors',
+      '\t -t\t     optional apianalytics.com token',
       '\t --version   output the current version of tunnel-proxy',
       '\n  examples:',
       '\t tunnel-proxy -p 8080',
       '\t tunnel-proxy -h "baseurl"',
-      '\t tunnel-proxy -q'
+      '\t tunnel-proxy -q',
+      '\t tunnel-proxy -t "54adbfffeba3f94b5182carr"'
   ].join('\n')
 });
 
 var opts = {
   port: cli.flags.p,
   quiet: cli.flags.q,
-  header: cli.flags.h
+  header: cli.flags.h,
+  token: cli.flags.t
 };
 
 proxy(opts);

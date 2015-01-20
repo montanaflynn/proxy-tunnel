@@ -2,13 +2,17 @@ var url = require('url')
 var http = require('http')
 var https = require('https')
 var meter = require("stream-meter")
+var harchive = require("./harchive.js")
+var analytics = require("./analytics.js")
+var Promise = require('es6-promise').Promise;
 
 module.exports = function(options) {
 
   var options = options || {}
   options.port = options.port || 3000
-  options.header = options.header || 'host'
+  options.header = options.header || 'target'
   options.quiet = options.quiet || false
+  options.token = options.token || false
 
   if (typeof options.port != 'number') {
     throw new Error("Port must be a number")
@@ -27,7 +31,7 @@ module.exports = function(options) {
 
   function proxy(creq, cres) {
 
-    var promise = new Promise(function(resolve, reject) {
+    var tunnel = new Promise(function(resolve, reject) {
 
       var baseurl
       var hostname
@@ -35,21 +39,26 @@ module.exports = function(options) {
       var port  
       var requestObject 
       var proxy
-      var start
+      var received
+      var receivedTime
+
+      received = process.hrtime() 
+      receivedTime = new Date() 
+
 
       creq.pause()
 
       if (!creq.headers[options.header]) {
         cres.writeHeader(400)
-        cres.end("No baseurl header")
-        return reject(Error("No baseurl header"))
+        cres.end("No "+options.header+" header")
+        return reject(Error("No "+options.header+" header"))
       }
 
       try {
         var baseurl = url.parse(creq.headers[options.header])
       } catch (e) {
         cres.writeHeader(400)
-        cres.end("Could not parse baseurl")
+        cres.end("Could not parse "+options.header+"")
         return reject(e)
       }
 
@@ -80,8 +89,6 @@ module.exports = function(options) {
         method: 'GET',
       }
 
-      start = process.hrtime() 
-
       protocol = (protocol === 'https:' ? https : http)
       proxy = protocol.request(requestObject, function (res) {
         var bytes
@@ -89,13 +96,13 @@ module.exports = function(options) {
         var latency
         var m = meter()
 
-        ttfb = ms(start)
+        ttfb = ms(received)
         
         cres.writeHeader(res.statusCode, res.headers)
         res.pipe(m).pipe(cres, {end: true})
         res.on('end', function() {
           bytes = m.bytes
-          latency = ms(start)
+          latency = ms(received)
           if (res.statusCode === 200) {
             statusCol = "\033[32m" + res.statusCode
           } else {
@@ -107,7 +114,14 @@ module.exports = function(options) {
           log += statusCol + "\033[0m "
           log += bytes + "B "
           log += ttfb + " " + latency
+
+          var har = harchive(creq, cres, receivedTime)
+          if (options.token) {
+            analytics(har, options.token)
+          }
+          // clog(JSON.stringify(har, null, 2))
           resolve(log)
+
         })
       }).on('error', function(e){
         cres.writeHeader(400)
@@ -120,7 +134,7 @@ module.exports = function(options) {
 
     })
 
-    promise.then(function(result) {
+    tunnel.then(function(result) {
       clog(result)
     }, function(err) {
       clog(err)
