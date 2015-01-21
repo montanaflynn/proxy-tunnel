@@ -3,7 +3,6 @@ var http = require('http')
 var https = require('https')
 var meter = require("stream-meter")
 var harchive = require("./harchive.js")
-var analytics = require("./analytics.js")
 var Promise = require('es6-promise').Promise;
 
 module.exports = function(options) {
@@ -40,7 +39,7 @@ module.exports = function(options) {
   } else if (options.transport === "zeromq") {
     var zmq = require('zmq')
     var socket = zmq.socket('push')
-    socket.connect('tcp://socket.apianalytics.com:5000')  
+    socket.connect('tcp://server.apianalytics.com:5000')  
     clog("Connected apianalytics with zeromq")
   }
 
@@ -129,11 +128,35 @@ module.exports = function(options) {
           log += bytes + "B "
           log += ttfb + " " + latency
 
-          var har = harchive(creq, cres, receivedTime)
           if (options.key) {
-            analytics(har, options.key, socket, options)
+
+            // Create HAR object
+            var har = harchive(creq, cres, receivedTime)
+
+            // Make sure we have a legitish key
+            if (typeof options.key != 'string') {
+              throw new Error("Token must be a string")
+            }
+
+            // Add the wrapper 
+            var wrapper = {
+              serviceToken: options.key,
+              har: {
+                log: har 
+              }
+            }
+
+            // Send to APIanalytics
+            if (options.transport === "socket.io") {
+              socket.emit("record", wrapper)
+            } else if (options.transport === "zeromq") {
+              socket.send(JSON.stringify(wrapper))
+            }
+
           }
+
           clog(JSON.stringify(har, null, 2), 2)
+
           resolve(log)
 
         })
