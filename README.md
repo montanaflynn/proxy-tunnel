@@ -34,7 +34,8 @@ sudo npm install proxy-tunnel -g
      -p          change proxy port number (default: 3000)
      -h          change target url header name (default: target)
      -q          don't log every request (default: false)
-     -t          optional apianalytics.com token
+     -k          optional apianalytics.com key
+     -t          optional apianalytics.com transport (default: socket.io)
      --help      output help and this usage information
      --version   output the current version of tunnel-proxy
 
@@ -42,7 +43,7 @@ sudo npm install proxy-tunnel -g
      tunnel-proxy -p 8080
      tunnel-proxy -h "baseurl"
      tunnel-proxy -q
-     tunnel-proxy -t "54adbfffeba3f94b5182carr"
+     tunnel-proxy -k "54adbfffeba3f94b5182carr" -t "zeromq"
 ```
 
 #### Programatic
