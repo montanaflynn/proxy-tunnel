@@ -31,6 +31,19 @@ module.exports = function(options) {
   http.createServer(proxy).listen(options.port)
   clog("Proxy tunnel running on port " + options.port)
 
+  // Default socket.io connection but also 
+  // should support zeromq and http as well
+  if (options.transport === "socket.io") {
+    var io = require("socket.io-client")
+    var socket = io("ws://socket.apianalytics.com:80")
+    clog("Connected apianalytics with socket.io")
+  } else if (options.transport === "zeromq") {
+    var zmq = require('zmq')
+    var socket = zmq.socket('push')
+    socket.connect('tcp://socket.apianalytics.com:5000')  
+    clog("Connected apianalytics with zeromq")
+  }
+
   function proxy(creq, cres) {
 
     var tunnel = new Promise(function(resolve, reject) {
@@ -118,7 +131,7 @@ module.exports = function(options) {
 
           var har = harchive(creq, cres, receivedTime)
           if (options.key) {
-            analytics(har, options.key, options.transport)
+            analytics(har, options.key, socket, options)
           }
           clog(JSON.stringify(har, null, 2), 2)
           resolve(log)
