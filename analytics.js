@@ -8,7 +8,9 @@ module.exports = function (har, token, socket, options) {
   // Add the wrapper 
   var wrapper = {
     serviceToken: token,
-    har: har
+    har: {
+      log: har 
+    }
   }
 
   // Send to APIanalytics

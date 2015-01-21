@@ -35,7 +35,7 @@ module.exports = function(options) {
   // should support zeromq and http as well
   if (options.transport === "socket.io") {
     var io = require("socket.io-client")
-    var socket = io("ws://socket.apianalytics.com:80")
+    var socket = io("ws://server.apianalytics.com:80")
     clog("Connected apianalytics with socket.io")
   } else if (options.transport === "zeromq") {
     var zmq = require('zmq')
