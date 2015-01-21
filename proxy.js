@@ -12,7 +12,9 @@ module.exports = function(options) {
   options.port = options.port || 3000
   options.header = options.header || 'target'
   options.quiet = options.quiet || false
-  options.token = options.token || false
+  options.verbose = options.verbose || false
+  options.key = options.key || false
+  options.transport = options.transport || "socket.io"
 
   if (typeof options.port != 'number') {
     throw new Error("Port must be a number")
@@ -44,7 +46,6 @@ module.exports = function(options) {
 
       received = process.hrtime() 
       receivedTime = new Date() 
-
 
       creq.pause()
 
@@ -90,7 +91,7 @@ module.exports = function(options) {
       }
 
       protocol = (protocol === 'https:' ? https : http)
-      proxy = protocol.request(requestObject, function (res) {
+      proxyReq = protocol.request(requestObject, function (res) {
         var bytes
         var ttfb
         var latency
@@ -116,10 +117,10 @@ module.exports = function(options) {
           log += ttfb + " " + latency
 
           var har = harchive(creq, cres, receivedTime)
-          if (options.token) {
-            analytics(har, options.token)
+          if (options.key) {
+            analytics(har, options.key, options.transport)
           }
-          // clog(JSON.stringify(har, null, 2))
+          clog(JSON.stringify(har, null, 2), 2)
           resolve(log)
 
         })
@@ -130,20 +131,25 @@ module.exports = function(options) {
       })
 
       creq.resume()
-      creq.pipe(proxy, {end: true})
+      creq.pipe(proxyReq, {end: true})
 
     })
 
     tunnel.then(function(result) {
       clog(result)
     }, function(err) {
-      clog(err)
-      cres.writeHeader(400).end()
+      clog(err, 3)
+      cres.writeHeader(502).end()
     })
   }
 
-  function clog(msg) {
-    if (!options.quiet) {
+  function clog(msg, level) {
+    if (level === 3) {
+      msg = "\033[31m " + msg     
+    }
+    if (!options.quiet && level != 2) {
+      console.log(msg)
+    } else if(options.verbose && level === 2) {
       console.log(msg)
     }
   }
