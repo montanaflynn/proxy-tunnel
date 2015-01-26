@@ -4,14 +4,11 @@ var https = require('https')
 var meter = require("stream-meter")
 var harchive = require("./harchive.js")
 
-// todo: add asproxy option
-http.globalAgent.maxSockets = Infinity
-https.globalAgent.maxSockets = Infinity
-
 module.exports = function(options) {
 
   var options = options || {}
   options.port = options.port || 3000
+  options.sockets = options.sockets || 300
   options.header = options.header || 'target'
   options.quiet = options.quiet || false
   options.verbose = options.verbose || false
@@ -22,6 +19,10 @@ module.exports = function(options) {
     throw new Error("Port must be a number")
   }
 
+  if (typeof options.sockets != 'number') {
+    throw new Error("Sockets must be a number")
+  }
+
   if (typeof options.header != 'string') {
     throw new Error("header must be a string")
   }
@@ -29,6 +30,9 @@ module.exports = function(options) {
   if (options.port < 1000 && !process.env.SUDO_UID) {
     throw new Error("Port number needs sudo permission")
   }
+
+  http.globalAgent.maxSockets = options.sockets
+  https.globalAgent.maxSockets = options.sockets
 
   http.createServer(proxy).listen(options.port)
   clog("Proxy tunnel running on port " + options.port)
@@ -46,8 +50,8 @@ module.exports = function(options) {
     clog("Connected apianalytics with zeromq")
   }
 
-  function proxy(creq, cres) {
-    
+  function proxy(preq, pres) {
+
     var baseurl
     var hostname
     var protocol 
@@ -60,27 +64,27 @@ module.exports = function(options) {
     received = process.hrtime() 
     receivedTime = new Date() 
 
-    creq.pause()
+    preq.pause()
 
-    if (!creq.headers[options.header]) {
-      cres.writeHeader(400)
-      cres.end("No "+options.header+" header")
+    if (!preq.headers[options.header]) {
+      pres.writeHeader(400)
+      pres.end("No "+options.header+" header")
       return reject(Error("No "+options.header+" header"))
     }
 
     try {
-      var baseurl = url.parse(creq.headers[options.header])
+      var baseurl = url.parse(preq.headers[options.header])
     } catch (e) {
-      cres.writeHeader(400)
-      cres.end("Could not parse "+options.header+"")
+      pres.writeHeader(400)
+      pres.end("Could not parse "+options.header+"")
       return reject(e)
     }
 
     hostname = baseurl.host
 
     if (!hostname) {
-      cres.writeHeader(400)
-      cres.end("No hostname")
+      pres.writeHeader(400)
+      pres.end("No hostname")
       reject(Error("No hostname"))
       return
     }
@@ -99,7 +103,7 @@ module.exports = function(options) {
     requestObject = {
       hostname: hostname,
       port: port,
-      path: creq.url,
+      path: preq.url,
       method: 'GET',
     }
 
@@ -112,8 +116,8 @@ module.exports = function(options) {
 
       ttfb = ms(received)
       
-      cres.writeHeader(res.statusCode, res.headers)
-      res.pipe(m).pipe(cres, {end: true})
+      pres.writeHeader(res.statusCode, res.headers)
+      res.pipe(m).pipe(pres, {end: true})
       res.on('end', function() {
         bytes = m.bytes
         latency = ms(received)
@@ -122,9 +126,9 @@ module.exports = function(options) {
         } else {
           statusCol = "\033[33m" + res.statusCode
         }
-        log = "\033[34m[PROXY ID: " + randomString() + "] "
+        log = "\033[34m[PROXY] "
         log += "\033[0m" + baseurl.protocol + "//"
-        log += hostname + creq.url + " "
+        log += hostname + preq.url + " "
         log += statusCol + "\033[0m "
         log += bytes + "B "
         log += ttfb + " " + latency
@@ -132,7 +136,7 @@ module.exports = function(options) {
         if (options.key) {
 
           // Create HAR object
-          var har = harchive(creq, cres, receivedTime)
+          var har = harchive(preq, pres, receivedTime)
 
           // Make sure we have a legitish key
           if (typeof options.key != 'string') {
@@ -158,18 +162,18 @@ module.exports = function(options) {
 
         clog(JSON.stringify(har, null, 2), 2)
 
-        cres.end()
+        pres.end()
         clog(log)
 
       })
     }).on('error', function(e){
-      cres.writeHeader(400)
-      cres.end("Error connecting to target server")
-      clog(err, 3)
+      pres.writeHeader(502)
+      pres.end("Error connecting to target server")
+      clog(e, 3)
     })
 
-    creq.resume()
-    creq.pipe(proxyReq, {end: true})
+    preq.resume()
+    preq.pipe(proxyReq, {end: true})
 
   }
 
@@ -183,16 +187,6 @@ module.exports = function(options) {
       console.log(msg)
     }
   }
-}
-
-function randomString () {
-  var a = []
-  var l = 10
-  var c = 'abcdefghjkmnpqrstuvwxyz23456789'
-  while (l--) {
-    a.push(c.charAt(Math.floor(Math.random() * c.length)))
-  }
-  return a.join('')
 }
 
 function ms(time) {

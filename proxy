@@ -8,6 +8,7 @@ var cli = require('meow')({
       '  $ tunnel-proxy [options]',
       '\n  options:',
       '\t -p\t     change proxy port number (default: 3000)',
+      '\t -s\t     change max sockets (default: 300)',
       '\t -h\t     change target url header name (default: target)',
       '\t -q\t     stay quiet, don\'t console log (default: false)',
       '\t -v\t     verbose mode logs har output (default: false)',
@@ -24,6 +25,7 @@ var cli = require('meow')({
 
 var opts = {
   port: cli.flags.p,
+  sockets: cli.flags.s,
   quiet: cli.flags.q,
   header: cli.flags.h,
   verbose: cli.flags.v,
