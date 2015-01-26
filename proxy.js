@@ -5,6 +5,10 @@ var meter = require("stream-meter")
 var harchive = require("./harchive.js")
 var Promise = require('es6-promise').Promise;
 
+// todo: add as proxy option
+http.globalAgent.maxSockets = Infinity
+https.globalAgent.maxSockets = Infinity
+
 module.exports = function(options) {
 
   var options = options || {}
@@ -157,6 +161,7 @@ module.exports = function(options) {
 
           clog(JSON.stringify(har, null, 2), 2)
 
+          cres.end()
           resolve(log)
 
         })
