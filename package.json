@@ -1,7 +1,7 @@
 {
   "author": "Montana Flynn",
   "name": "proxy-tunnel",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Proxy all http and https requests through a tunnel",
   "main": "proxy.js",
   "bin": {
