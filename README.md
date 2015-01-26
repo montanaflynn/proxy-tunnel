@@ -4,23 +4,7 @@ Proxy all http and https requests through a tunnel and optionally sends data to 
 
 ![Screencast of the proxy](https://i.imgur.com/1IztvqA.gif)
 
-### Quick Start
-
-Using NPM you can install proxy-tunnel globally so it can be ran at anytime anywhere.
-
-```sh
-npm install proxy-tunnel -g
-tunnel-proxy
-```
-Once the server is running you can then send it requests to be proxied by adding the target url in the `target` request header. Here's an example using cURL.
-
-```sh
-curl 127.0.0.1:3000/get -H "target:http://httpbin.org"
-```
-
-### Advanced Usage
-
-#### CLI
+### Usage
 
 ```sh
 sudo npm install proxy-tunnel -g
@@ -32,18 +16,19 @@ sudo npm install proxy-tunnel -g
 
     options:
      -p          change proxy port number (default: 3000)
+     -s          change max sockets (default: 300)
      -h          change target url header name (default: target)
-     -q          don't log every request (default: false)
-     -k          optional apianalytics.com key
-     -t          optional apianalytics.com transport (default: socket.io)
-     --help      output help and this usage information
+     -q          stay quiet, don't console log (default: false)
+     -v          verbose mode logs har output (default: false)
+     -k          apianalytics.com api key (optional)
+     -t          apianalytics.com transport layer (optional options: "socket.io", "zeromq" default: "socket.io")
+     --help      output usage and help information
      --version   output the current version of tunnel-proxy
 
     examples:
-     tunnel-proxy -p 8080
      tunnel-proxy -h "baseurl"
-     tunnel-proxy -q
-     tunnel-proxy -k "54adbfffeba3f94b5182carr" -t "zeromq"
+     tunnel-proxy -q -p 8080
+     tunnel-proxy -t "zeromq" -k "54adbfffeba3f94b5182carr"
 ```
 
 #### Programatic
