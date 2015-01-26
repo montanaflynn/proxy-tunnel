@@ -3,9 +3,8 @@ var http = require('http')
 var https = require('https')
 var meter = require("stream-meter")
 var harchive = require("./harchive.js")
-var Promise = require('es6-promise').Promise;
 
-// todo: add as proxy option
+// todo: add asproxy option
 http.globalAgent.maxSockets = Infinity
 https.globalAgent.maxSockets = Infinity
 
@@ -48,140 +47,130 @@ module.exports = function(options) {
   }
 
   function proxy(creq, cres) {
+    
+    var baseurl
+    var hostname
+    var protocol 
+    var port  
+    var requestObject 
+    var proxy
+    var received
+    var receivedTime
 
-    var tunnel = new Promise(function(resolve, reject) {
+    received = process.hrtime() 
+    receivedTime = new Date() 
 
-      var baseurl
-      var hostname
-      var protocol 
-      var port  
-      var requestObject 
-      var proxy
-      var received
-      var receivedTime
+    creq.pause()
 
-      received = process.hrtime() 
-      receivedTime = new Date() 
+    if (!creq.headers[options.header]) {
+      cres.writeHeader(400)
+      cres.end("No "+options.header+" header")
+      return reject(Error("No "+options.header+" header"))
+    }
 
-      creq.pause()
+    try {
+      var baseurl = url.parse(creq.headers[options.header])
+    } catch (e) {
+      cres.writeHeader(400)
+      cres.end("Could not parse "+options.header+"")
+      return reject(e)
+    }
 
-      if (!creq.headers[options.header]) {
-        cres.writeHeader(400)
-        cres.end("No "+options.header+" header")
-        return reject(Error("No "+options.header+" header"))
-      }
+    hostname = baseurl.host
 
-      try {
-        var baseurl = url.parse(creq.headers[options.header])
-      } catch (e) {
-        cres.writeHeader(400)
-        cres.end("Could not parse "+options.header+"")
-        return reject(e)
-      }
+    if (!hostname) {
+      cres.writeHeader(400)
+      cres.end("No hostname")
+      reject(Error("No hostname"))
+      return
+    }
 
-      hostname = baseurl.host
-
-      if (!hostname) {
-        cres.writeHeader(400)
-        cres.end("No hostname")
-        reject(Error("No hostname"))
-        return
-      }
-
-      if (baseurl.port) {
-        port = baseurl.port
+    if (baseurl.port) {
+      port = baseurl.port
+    } else {
+      protocol = baseurl.protocol
+      if (protocol === 'https:') {
+        port = 443
       } else {
-        protocol = baseurl.protocol
-        if (protocol === 'https:') {
-          port = 443
+        port = 80
+      }
+    }
+
+    requestObject = {
+      hostname: hostname,
+      port: port,
+      path: creq.url,
+      method: 'GET',
+    }
+
+    protocol = (protocol === 'https:' ? https : http)
+    proxyReq = protocol.request(requestObject, function (res) {
+      var bytes
+      var ttfb
+      var latency
+      var m = meter()
+
+      ttfb = ms(received)
+      
+      cres.writeHeader(res.statusCode, res.headers)
+      res.pipe(m).pipe(cres, {end: true})
+      res.on('end', function() {
+        bytes = m.bytes
+        latency = ms(received)
+        if (res.statusCode === 200) {
+          statusCol = "\033[32m" + res.statusCode
         } else {
-          port = 80
+          statusCol = "\033[33m" + res.statusCode
         }
-      }
+        log = "\033[34m[PROXY ID: " + randomString() + "] "
+        log += "\033[0m" + baseurl.protocol + "//"
+        log += hostname + creq.url + " "
+        log += statusCol + "\033[0m "
+        log += bytes + "B "
+        log += ttfb + " " + latency
 
-      requestObject = {
-        hostname: hostname,
-        port: port,
-        path: creq.url,
-        method: 'GET',
-      }
+        if (options.key) {
 
-      protocol = (protocol === 'https:' ? https : http)
-      proxyReq = protocol.request(requestObject, function (res) {
-        var bytes
-        var ttfb
-        var latency
-        var m = meter()
+          // Create HAR object
+          var har = harchive(creq, cres, receivedTime)
 
-        ttfb = ms(received)
-        
-        cres.writeHeader(res.statusCode, res.headers)
-        res.pipe(m).pipe(cres, {end: true})
-        res.on('end', function() {
-          bytes = m.bytes
-          latency = ms(received)
-          if (res.statusCode === 200) {
-            statusCol = "\033[32m" + res.statusCode
-          } else {
-            statusCol = "\033[33m" + res.statusCode
-          }
-          log = "\033[34m[PROXY ID: " + randomString() + "] "
-          log += "\033[0m" + baseurl.protocol + "//"
-          log += hostname + creq.url + " "
-          log += statusCol + "\033[0m "
-          log += bytes + "B "
-          log += ttfb + " " + latency
-
-          if (options.key) {
-
-            // Create HAR object
-            var har = harchive(creq, cres, receivedTime)
-
-            // Make sure we have a legitish key
-            if (typeof options.key != 'string') {
-              throw new Error("Token must be a string")
-            }
-
-            // Add the wrapper 
-            var wrapper = {
-              serviceToken: options.key,
-              har: {
-                log: har 
-              }
-            }
-
-            // Send to APIanalytics
-            if (options.transport === "socket.io") {
-              socket.emit("record", wrapper)
-            } else if (options.transport === "zeromq") {
-              socket.send(JSON.stringify(wrapper))
-            }
-
+          // Make sure we have a legitish key
+          if (typeof options.key != 'string') {
+            throw new Error("Token must be a string")
           }
 
-          clog(JSON.stringify(har, null, 2), 2)
+          // Add the wrapper 
+          var wrapper = {
+            serviceToken: options.key,
+            har: {
+              log: har 
+            }
+          }
 
-          cres.end()
-          resolve(log)
+          // Send to APIanalytics
+          if (options.transport === "socket.io") {
+            socket.emit("record", wrapper)
+          } else if (options.transport === "zeromq") {
+            socket.send(JSON.stringify(wrapper))
+          }
 
-        })
-      }).on('error', function(e){
-        cres.writeHeader(400)
-        cres.end("Error connecting to target server")
-        reject(e)
+        }
+
+        clog(JSON.stringify(har, null, 2), 2)
+
+        cres.end()
+        clog(log)
+
       })
-
-      creq.resume()
-      creq.pipe(proxyReq, {end: true})
-
-    })
-
-    tunnel.then(function(result) {
-      clog(result)
-    }, function(err) {
+    }).on('error', function(e){
+      cres.writeHeader(400)
+      cres.end("Error connecting to target server")
       clog(err, 3)
-      cres.writeHeader(502).end()
     })
+
+    creq.resume()
+    creq.pipe(proxyReq, {end: true})
+
   }
 
   function clog(msg, level) {
